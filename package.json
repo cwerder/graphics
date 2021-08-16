@@ -1,0 +1,25 @@
+{
+  "name": "graphics",
+  "version": "1.0.0",
+  "description": "Fun with Graphics",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cwerder/graphics.git"
+  },
+  "author": "CJ Werder",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cwerder/graphics/issues"
+  },
+  "homepage": "https://github.com/cwerder/graphics#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  }
+}
