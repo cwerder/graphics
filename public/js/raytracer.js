@@ -1,10 +1,11 @@
 const coordinateConverter = require('./coordinate_converter.js');
 const mathOperations = require('./math_operations.js');
 
-function Sphere(center, radius, color) {
+function Sphere(center, radius, color, shiny) {
     this.center = center;
     this.radius = radius;
     this.color = color;
+    this.shininess = shiny;
 }
 
 function Light(type, intensity, position, direction) {
@@ -18,10 +19,10 @@ function Light(type, intensity, position, direction) {
 }
 
 var spheres = [
-            new Sphere([0, -1, 3], 1, [255, 0, 0]),
-            new Sphere([2, 0, 4], 1, [0, 0, 255]),
-            new Sphere([-2, 0, 4], 1, [0, 255, 0]),
-            new Sphere([0, -5001, 0], 5000, [255, 255, 0])
+            new Sphere([0, -1, 3], 1, [255, 0, 0], 500),
+            new Sphere([2, 0, 4], 1, [0, 0, 255], 500),
+            new Sphere([-2, 0, 4], 1, [0, 255, 0], 10),
+            new Sphere([0, -5001, 0], 5000, [255, 255, 0], 1000)
         ];
 
 var lights = [
@@ -78,7 +79,7 @@ function traceRay(origin, D, t_min, t_max) {
     }
     let spherePoint = mathOperations.add(origin, mathOperations.scalarMultiplication(D, closest_t));
     let normal_vector = mathOperations.normalize_vector(mathOperations.subtract(spherePoint, closest_sphere.center));
-    return mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector));
+    return mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector, mathOperations.scalarMultiplication(D, -1), closest_sphere.shininess));
 }
 
 function intersectRaySphere(origin, D, sphere) {
@@ -100,7 +101,7 @@ function intersectRaySphere(origin, D, sphere) {
     return [t1, t2];
 }
 
-function computeLighting(point, normal) {
+function computeLighting(point, normal, V, s) {
     let intensity = 0;
     lights.forEach(light => {
         if (light.type === 'ambient') {
@@ -112,9 +113,20 @@ function computeLighting(point, normal) {
             } else {
                 light_vector = light.direction;
             }
+            
+            // diffuse
             let n_dot_l = mathOperations.dotProduct(normal, light_vector);
             if (n_dot_l > 0) {
                 intensity += light.intensity * n_dot_l/(mathOperations.vector_length(normal) * mathOperations.vector_length(light_vector));
+            }
+
+            // specular
+            if (s != -1) {
+                let R = mathOperations.subtract(mathOperations.scalarMultiplication(normal, 2 * mathOperations.dotProduct(normal, light_vector)), light_vector);
+                let r_dot_v = mathOperations.dotProduct(R, V);
+                if (r_dot_v > 0) {
+                    intensity += light.intensity * Math.pow(r_dot_v/(mathOperations.vector_length(R) * mathOperations.vector_length(V)), s);
+                }
             }
         }
     });
