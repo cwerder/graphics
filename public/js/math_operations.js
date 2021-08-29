@@ -38,3 +38,12 @@ function scalarMultiplication(vector, scalar) {
     }
     return scaledVector;
 }
+
+module.exports = {
+    add,
+    subtract,
+    dotProduct,
+    vector_length,
+    normalize_vector,
+    scalarMultiplication
+}

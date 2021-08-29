@@ -1,3 +1,6 @@
+const coordinateConverter = require('./coordinate_converter.js');
+const mathOperations = require('./math_operations.js');
+
 function Sphere(center, radius, color) {
     this.center = center;
     this.radius = radius;
@@ -40,9 +43,9 @@ function rayTracer(canvas, context) {
     var canvas_pitch = canvas_buffer.width * 4;
     for (let x = -canvas.width/2; x <= canvas.width/2; x++) {
         for (let y = -canvas.height/2; y <= canvas.height/2; y++) {
-            let D = canvasToViewport(canvas, x, y, 1);
+            let D = coordinateConverter.canvasToViewport(canvas, x, y, 1);
             let color = traceRay(origin, D, 1, Number.POSITIVE_INFINITY);
-            putPixel(canvas, canvas_buffer, canvas_pitch, color, x, y);
+            coordinateConverter.putPixel(canvas, canvas_buffer, canvas_pitch, color, x, y);
         }
     }
     updateCanvas(context, canvas_buffer);
@@ -73,18 +76,18 @@ function traceRay(origin, D, t_min, t_max) {
     if (closest_sphere === null) {
         return [255, 255, 255];
     }
-    let spherePoint = add(origin, scalarMultiplication(D, closest_t));
-    let normal_vector = normalize_vector(subtract(spherePoint, closest_sphere.center));
-    return scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector));
+    let spherePoint = mathOperations.add(origin, mathOperations.scalarMultiplication(D, closest_t));
+    let normal_vector = mathOperations.normalize_vector(mathOperations.subtract(spherePoint, closest_sphere.center));
+    return mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector));
 }
 
 function intersectRaySphere(origin, D, sphere) {
     let r = sphere.radius;
-    let CO = subtract(origin, sphere.center);
+    let CO = mathOperations.subtract(origin, sphere.center);
 
-    a = dotProduct(D, D);
-    b = 2*dotProduct(CO, D);
-    c = dotProduct(CO, CO) - r*r;
+    a = mathOperations.dotProduct(D, D);
+    b = 2*mathOperations.dotProduct(CO, D);
+    c = mathOperations.dotProduct(CO, CO) - r*r;
 
     discriminant = b*b - 4*a*c;
     if (discriminant < 0) {
@@ -105,13 +108,13 @@ function computeLighting(point, normal) {
         } else {
             let light_vector = [];
             if (light.type === 'point') {
-                light_vector = subtract(light.position, point);
+                light_vector = mathOperations.subtract(light.position, point);
             } else {
                 light_vector = light.direction;
             }
-            let n_dot_l = dotProduct(normal, light_vector);
+            let n_dot_l = mathOperations.dotProduct(normal, light_vector);
             if (n_dot_l > 0) {
-                intensity += light.intensity * n_dot_l/(vector_length(normal) * vector_length(light_vector));
+                intensity += light.intensity * n_dot_l/(mathOperations.vector_length(normal) * mathOperations.vector_length(light_vector));
             }
         }
     });

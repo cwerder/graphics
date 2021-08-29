@@ -4,6 +4,7 @@
   "description": "Fun with Graphics",
   "main": "server.js",
   "scripts": {
+    "build": "webpack && node copy-bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,6 +21,8 @@
     "express": "^4.17.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.12"
+    "nodemon": "2.0.12",
+    "webpack": "5.51.1",
+    "webpack-cli": "4.8.0"
   }
 }

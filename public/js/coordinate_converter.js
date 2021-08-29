@@ -17,3 +17,8 @@ function canvasToViewport(canvas, Cx, Cy, d) {
     let Vy = Cy * Vh/Ch;
     return [Vx, Vy, d];
 }
+
+module.exports = {
+    putPixel,
+    canvasToViewport
+}
