@@ -57,6 +57,16 @@ function updateCanvas(context, buffer) {
 }
 
 function traceRay(origin, D, t_min, t_max) {
+    let [closest_sphere, closest_t] = closestIntersection(origin, D, t_min, t_max);
+    if (closest_sphere === null) {
+        return [255, 255, 255];
+    }
+    let spherePoint = mathOperations.add(origin, mathOperations.scalarMultiplication(D, closest_t));
+    let normal_vector = mathOperations.normalize_vector(mathOperations.subtract(spherePoint, closest_sphere.center));
+    return mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector, mathOperations.scalarMultiplication(D, -1), closest_sphere.shininess));
+}
+
+function closestIntersection(origin, D, t_min, t_max) {
     let closest_t = Number.POSITIVE_INFINITY;
     closest_sphere = null;
     
@@ -74,12 +84,8 @@ function traceRay(origin, D, t_min, t_max) {
             closest_sphere = sphere;
         }
     });
-    if (closest_sphere === null) {
-        return [255, 255, 255];
-    }
-    let spherePoint = mathOperations.add(origin, mathOperations.scalarMultiplication(D, closest_t));
-    let normal_vector = mathOperations.normalize_vector(mathOperations.subtract(spherePoint, closest_sphere.center));
-    return mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector, mathOperations.scalarMultiplication(D, -1), closest_sphere.shininess));
+
+    return [closest_sphere, closest_t];
 }
 
 function intersectRaySphere(origin, D, sphere) {
@@ -108,10 +114,19 @@ function computeLighting(point, normal, V, s) {
             intensity += light.intensity;
         } else {
             let light_vector = [];
+            let t_max;
             if (light.type === 'point') {
                 light_vector = mathOperations.subtract(light.position, point);
+                t_max = 1;
             } else {
                 light_vector = light.direction;
+                t_max = Number.POSITIVE_INFINITY;
+            }
+
+            // shadow check
+            let [shadow_sphere, shadow_t] = closestIntersection(point, light_vector, 0.001, t_max);
+            if (shadow_sphere !== null) {
+                return;
             }
             
             // diffuse
