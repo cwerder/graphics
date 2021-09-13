@@ -1,11 +1,12 @@
 const coordinateConverter = require('./coordinate_converter.js');
 const mathOperations = require('./math_operations.js');
 
-function Sphere(center, radius, color, shiny) {
+function Sphere(center, radius, color, shiny, reflective) {
     this.center = center;
     this.radius = radius;
     this.color = color;
     this.shininess = shiny;
+    this.reflective = reflective;
 }
 
 function Light(type, intensity, position, direction) {
@@ -19,10 +20,10 @@ function Light(type, intensity, position, direction) {
 }
 
 var spheres = [
-            new Sphere([0, -1, 3], 1, [255, 0, 0], 500),
-            new Sphere([2, 0, 4], 1, [0, 0, 255], 500),
-            new Sphere([-2, 0, 4], 1, [0, 255, 0], 10),
-            new Sphere([0, -5001, 0], 5000, [255, 255, 0], 1000)
+            new Sphere([0, -1, 3], 1, [255, 0, 0], 500, .2),
+            new Sphere([2, 0, 4], 1, [0, 0, 255], 500, .3),
+            new Sphere([-2, 0, 4], 1, [0, 255, 0], 10, .4),
+            new Sphere([0, -5001, 0], 5000, [255, 255, 0], 1000, .5)
         ];
 
 var lights = [
@@ -45,7 +46,7 @@ function rayTracer(canvas, context) {
     for (let x = -canvas.width/2; x <= canvas.width/2; x++) {
         for (let y = -canvas.height/2; y <= canvas.height/2; y++) {
             let D = coordinateConverter.canvasToViewport(canvas, x, y, 1);
-            let color = traceRay(origin, D, 1, Number.POSITIVE_INFINITY);
+            let color = traceRay(origin, D, 1, Number.POSITIVE_INFINITY, 3);
             coordinateConverter.putPixel(canvas, canvas_buffer, canvas_pitch, color, x, y);
         }
     }
@@ -56,7 +57,28 @@ function updateCanvas(context, buffer) {
     context.putImageData(buffer, 0, 0);
 }
 
-function traceRay(origin, D, t_min, t_max) {
+function traceRay(origin, D, t_min, t_max, recursion_depth) {
+    let [closest_sphere, closest_t] = closestIntersection(origin, D, t_min, t_max);
+    if (closest_sphere === null) {
+        return [0, 0, 0];
+    }
+    let spherePoint = mathOperations.add(origin, mathOperations.scalarMultiplication(D, closest_t));
+    let normal_vector = mathOperations.normalize_vector(mathOperations.subtract(spherePoint, closest_sphere.center));
+    let local_color = mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector, mathOperations.scalarMultiplication(D, -1), closest_sphere.shininess, recursion_depth));
+
+    // If the recursion limit is hit or the object is not reflective, then done.
+    let reflectiveConstant = closest_sphere.reflective;
+    if (recursion_depth <= 0 || reflectiveConstant <= 0) {
+        return local_color;
+    }
+
+    // Compute the reflected color
+    let R = reflectRay(mathOperations.scalarMultiplication(D, -1), normal_vector);
+    let reflected_color = traceRay(spherePoint, R, .001, Number.POSITIVE_INFINITY, recursion_depth-1);
+    return mathOperations.add(mathOperations.scalarMultiplication(local_color, 1-reflectiveConstant), mathOperations.scalarMultiplication(reflected_color, reflectiveConstant));
+}
+
+function closestIntersection(origin, D, t_min, t_max) {
     let closest_t = Number.POSITIVE_INFINITY;
     closest_sphere = null;
     
@@ -74,12 +96,8 @@ function traceRay(origin, D, t_min, t_max) {
             closest_sphere = sphere;
         }
     });
-    if (closest_sphere === null) {
-        return [255, 255, 255];
-    }
-    let spherePoint = mathOperations.add(origin, mathOperations.scalarMultiplication(D, closest_t));
-    let normal_vector = mathOperations.normalize_vector(mathOperations.subtract(spherePoint, closest_sphere.center));
-    return mathOperations.scalarMultiplication(closest_sphere.color, computeLighting(spherePoint, normal_vector, mathOperations.scalarMultiplication(D, -1), closest_sphere.shininess));
+
+    return [closest_sphere, closest_t];
 }
 
 function intersectRaySphere(origin, D, sphere) {
@@ -108,10 +126,19 @@ function computeLighting(point, normal, V, s) {
             intensity += light.intensity;
         } else {
             let light_vector = [];
+            let t_max;
             if (light.type === 'point') {
                 light_vector = mathOperations.subtract(light.position, point);
+                t_max = 1;
             } else {
                 light_vector = light.direction;
+                t_max = Number.POSITIVE_INFINITY;
+            }
+
+            // shadow check
+            let [shadow_sphere, shadow_t] = closestIntersection(point, light_vector, 0.001, t_max);
+            if (shadow_sphere !== null) {
+                return;
             }
             
             // diffuse
@@ -122,7 +149,7 @@ function computeLighting(point, normal, V, s) {
 
             // specular
             if (s != -1) {
-                let R = mathOperations.subtract(mathOperations.scalarMultiplication(normal, 2 * mathOperations.dotProduct(normal, light_vector)), light_vector);
+                let R = reflectRay(light_vector, normal);
                 let r_dot_v = mathOperations.dotProduct(R, V);
                 if (r_dot_v > 0) {
                     intensity += light.intensity * Math.pow(r_dot_v/(mathOperations.vector_length(R) * mathOperations.vector_length(V)), s);
@@ -131,6 +158,10 @@ function computeLighting(point, normal, V, s) {
         }
     });
     return intensity;
+}
+
+function reflectRay(R, N) {
+    return mathOperations.subtract(mathOperations.scalarMultiplication(N, 2 * mathOperations.dotProduct(N, R)), R);
 }
 
 window.onload = init();
